@@ -1,0 +1,154 @@
+rules_version = '2';
+
+// Security model:
+// - Everything tenant-specific lives under organizations/{orgId}.
+// - You must be a member of an org (a members/{uid} doc exists) to read its
+//   data. Only a coordinator can write shared data (menus, pricing, ledger,
+//   payments, summaries) and manage members.
+// - A member may write only their own order (before it is locked) and their
+//   own default preference.
+// - The audit log is append-only (no update/delete from clients).
+// These rules are the real security boundary; the public Firebase web keys in
+// the client bundle grant no data access on their own.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(orgId) {
+      return /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid);
+    }
+
+    function isMember(orgId) {
+      return isSignedIn() && exists(memberPath(orgId));
+    }
+
+    function memberData(orgId) {
+      return get(memberPath(orgId)).data;
+    }
+
+    function isCoordinator(orgId) {
+      return isMember(orgId) && memberData(orgId).role == 'coordinator';
+    }
+
+    function orgCreatedBy(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)).data.createdBy;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---- User profiles: only the owner. ----
+    match /users/{uid} {
+      allow read, write: if isSelf(uid);
+    }
+
+    // ---- Organizations ----
+    match /organizations/{orgId} {
+      // Any signed-in user can read an org doc so they can join by code and so
+      // members can load org settings. Sensitive records live in subcollections
+      // gated by membership below.
+      allow read: if isSignedIn();
+
+      // Creator must stamp themselves as createdBy.
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      // Only a coordinator can change org settings/offices/pricing pointers.
+      allow update: if isCoordinator(orgId);
+      allow delete: if false;
+
+      // ---- Members ----
+      match /members/{uid} {
+        allow read: if isMember(orgId);
+
+        // Coordinator can add/update anyone.
+        allow write: if isCoordinator(orgId);
+
+        // The org creator bootstraps their own coordinator membership right
+        // after creating the org (before any coordinator exists yet).
+        allow create: if isSelf(uid)
+          && request.resource.data.uid == uid
+          && orgCreatedBy(orgId) == request.auth.uid;
+
+        // A user may create their OWN membership when joining, as a plain
+        // member (cannot self-promote to coordinator).
+        allow create: if isSelf(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.role == 'member';
+
+        // A member may update only their own doc, and cannot change their role.
+        allow update: if isSelf(uid)
+          && request.resource.data.role == resource.data.role;
+      }
+
+      // ---- Pricing history: read by members, write by coordinator. ----
+      match /pricing/{priceId} {
+        allow read: if isMember(orgId);
+        allow write: if isCoordinator(orgId);
+      }
+
+      // ---- Menus: read by members, posted by coordinator. ----
+      match /menus/{date} {
+        allow read: if isMember(orgId);
+        allow write: if isCoordinator(orgId);
+      }
+
+      // ---- Orders ----
+      match /orders/{date}/entries/{uid} {
+        allow read: if isMember(orgId);
+
+        // Coordinator can write any entry (locking, container status).
+        allow write: if isCoordinator(orgId);
+
+        // A member may create/update ONLY their own entry, only while it is not
+        // locked, and only with a valid choice.
+        allow create: if isSelf(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.choice in ['half', 'full', 'skip']
+          && request.resource.data.locked == false;
+
+        allow update: if isSelf(uid)
+          && resource.data.locked == false
+          && request.resource.data.uid == uid
+          && request.resource.data.choice in ['half', 'full', 'skip'];
+      }
+
+      // ---- Daily summaries: read by members, written by coordinator. ----
+      match /summaries/{date} {
+        allow read: if isMember(orgId);
+        allow write: if isCoordinator(orgId);
+      }
+
+      // ---- Ledger: readable by members, written by coordinator only. ----
+      match /ledger/{entryId} {
+        allow read: if isMember(orgId);
+        allow write: if isCoordinator(orgId);
+      }
+
+      // ---- Payments: readable by members, written by coordinator only. ----
+      match /payments/{paymentId} {
+        allow read: if isMember(orgId);
+        allow write: if isCoordinator(orgId);
+      }
+
+      // ---- Audit log: coordinator-only, append-only. ----
+      match /audit/{entryId} {
+        allow read: if isCoordinator(orgId);
+        allow create: if isCoordinator(orgId);
+        allow update, delete: if false;
+      }
+    }
+
+    // ---- App update metadata: public read (version banner works even before
+    // login), never client-writable (you update it from the Firebase console). ----
+    match /appConfig/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
