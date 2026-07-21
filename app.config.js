@@ -5,7 +5,7 @@ module.exports = {
   expo: {
     name: 'Tiffin Manager',
     slug: 'tiffin-manager',
-    version: '1.0.1',
+    version: '1.0.2',
     orientation: 'portrait',
     scheme: 'tiffin',
     userInterfaceStyle: 'light',
@@ -22,7 +22,7 @@ module.exports = {
     },
     android: {
       package: 'com.tiffin.manager',
-      versionCode: 2,
+      versionCode: 3,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#FF5A3C',

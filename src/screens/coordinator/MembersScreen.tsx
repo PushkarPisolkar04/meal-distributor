@@ -22,6 +22,22 @@ export function MembersScreen() {
       after,
     });
 
+  const activeCoordinators = members.filter((m) => m.role === 'coordinator' && m.active).length;
+
+  const changeRole = async (member: Member, role: Member['role']) => {
+    if (member.uid === user!.uid) {
+      Alert.alert('Not allowed', "You can't change your own role. Ask another coordinator, or use recovery.");
+      return;
+    }
+    if (role === 'member' && member.role === 'coordinator' && activeCoordinators <= 1) {
+      Alert.alert('Keep one coordinator', 'There must always be at least one coordinator. Promote someone else first.');
+      return;
+    }
+    await setRole(org.id, member.uid, role);
+    await audit(member.uid, { role });
+    setSelected({ ...member, role });
+  };
+
   const sorted = [...members].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -66,27 +82,23 @@ export function MembersScreen() {
               </Row>
 
               <Text style={styles.section}>Role</Text>
-              <Row style={{ gap: spacing.sm }}>
-                <Button
-                  label="Member"
-                  variant={selected.role === 'member' ? 'solid' : 'outline'}
-                  onPress={async () => {
-                    await setRole(org.id, selected.uid, 'member');
-                    await audit(selected.uid, { role: 'member' });
-                    setSelected({ ...selected, role: 'member' });
-                  }}
-                />
-                <Button
-                  label="Coordinator"
-                  gradient="violet"
-                  variant={selected.role === 'coordinator' ? 'solid' : 'outline'}
-                  onPress={async () => {
-                    await setRole(org.id, selected.uid, 'coordinator');
-                    await audit(selected.uid, { role: 'coordinator' });
-                    setSelected({ ...selected, role: 'coordinator' });
-                  }}
-                />
-              </Row>
+              {selected.uid === user!.uid ? (
+                <Text style={styles.roleNote}>This is you. You can't change your own role.</Text>
+              ) : (
+                <Row style={{ gap: spacing.sm }}>
+                  <Button
+                    label="Member"
+                    variant={selected.role === 'member' ? 'solid' : 'outline'}
+                    onPress={() => changeRole(selected, 'member')}
+                  />
+                  <Button
+                    label="Coordinator"
+                    gradient="violet"
+                    variant={selected.role === 'coordinator' ? 'solid' : 'outline'}
+                    onPress={() => changeRole(selected, 'coordinator')}
+                  />
+                </Row>
+              )}
 
               <View style={{ height: spacing.md }} />
               <Button
@@ -96,6 +108,10 @@ export function MembersScreen() {
                 onPress={() => {
                   if (selected.uid === user!.uid) {
                     Alert.alert('Not allowed', 'You cannot deactivate yourself.');
+                    return;
+                  }
+                  if (selected.active && selected.role === 'coordinator' && activeCoordinators <= 1) {
+                    Alert.alert('Keep one coordinator', 'This is the only active coordinator. Promote someone else first.');
                     return;
                   }
                   updateMember(org.id, selected.uid, { active: !selected.active });
@@ -120,6 +136,7 @@ const styles = StyleSheet.create({
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.sm },
   sheetTitle: { fontSize: 20, fontWeight: '800', color: colors.ink },
   section: { fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: spacing.lg, marginBottom: spacing.xs },
+  roleNote: { fontSize: 13, color: colors.muted, fontStyle: 'italic' },
   chip: { paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: radius.pill, backgroundColor: colors.bgWarm, borderWidth: 1, borderColor: colors.line },
   chipActive: { backgroundColor: colors.purple, borderColor: colors.purple },
   chipText: { fontWeight: '700', color: colors.body },

@@ -81,6 +81,10 @@ service cloud.firestore {
           && request.resource.data.uid == uid
           && request.resource.data.role == 'member';
 
+        // The group creator can always fix their own membership (recovery if
+        // they accidentally demoted themselves).
+        allow update: if isSelf(uid) && orgCreatedBy(orgId) == request.auth.uid;
+
         // A member may update only their own doc, and cannot change their role.
         allow update: if isSelf(uid)
           && request.resource.data.role == resource.data.role;

@@ -3,7 +3,7 @@ import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, ChoiceChips, GradientHeader, Row, Screen, Tag } from '@/components';
 import { colors, spacing } from '@/theme';
 import { useApp } from '@/context/AppContext';
-import { setDefaultChoice } from '@/services/members';
+import { setDefaultChoice, setRole } from '@/services/members';
 import { ensurePermissions } from '@/services/notifications';
 import { checkForUpdate, currentVersion } from '@/services/appUpdate';
 import type { TiffinChoice } from '@/types';
@@ -59,6 +59,27 @@ export function MemberSettings() {
           </Row>
           <Text style={styles.sub}>Group: {org.name}</Text>
         </Card>
+
+        {org.createdBy === user?.uid ? (
+          <Card>
+            <Text style={styles.cardTitle}>Coordinator access</Text>
+            <Text style={styles.hint}>
+              You created this group. If you were switched to a member by mistake, restore your coordinator role.
+            </Text>
+            <View style={{ height: spacing.md }} />
+            <Button
+              label="Restore my coordinator access"
+              gradient="violet"
+              onPress={async () => {
+                try {
+                  await setRole(org.id, user!.uid, 'coordinator');
+                } catch {
+                  Alert.alert('Could not restore', 'Please try again in a moment.');
+                }
+              }}
+            />
+          </Card>
+        ) : null}
 
         <Card>
           <Text style={styles.cardTitle}>Recurring preference</Text>
