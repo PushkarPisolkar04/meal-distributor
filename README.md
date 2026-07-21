@@ -70,13 +70,13 @@ EXPO_PUBLIC_FIREBASE_APP_ID=...
 EXPO_PUBLIC_GITHUB_REPO=PushkarPisolkar04/meal-distributor
 ```
 
-Deploy the security rules, then start:
+Deploy the security rules, then start the dev server:
 
 ```bash
 npm install -g firebase-tools && firebase login
 firebase deploy --only firestore:rules
-npm start          # open in Expo Go, or:
-npm run android    # build & run on a device/emulator
+npm start          # dev server
+npm run android    # build & run on a connected device/emulator
 ```
 
 **Tests & checks**
@@ -86,22 +86,29 @@ npm test           # unit tests for the money-critical logic
 npm run typecheck  # TypeScript
 ```
 
-**Build an APK**
+## Releasing a new version
+
+APKs are built and published to **GitHub Releases automatically** by a workflow — no local Android tooling needed.
+
+One-time setup: add a repo secret named `EXPO_TOKEN` (create a free token at **expo.dev → Account settings → Access tokens**).
+
+Then to cut a release:
 
 ```bash
-npm install -g eas-cli && eas login
-eas build -p android --profile preview   # outputs an installable APK
+# bump "version" in app.config.js first, e.g. 1.0.0 -> 1.0.1
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
-To publish an update: bump `version` in `app.config.js`, build a new APK, and attach it to a new GitHub **Release**. Installed apps detect it automatically.
+The workflow builds the APK, signs it consistently, and attaches it to a Release. Anyone on an older version gets the **Update available** prompt automatically.
 
 ---
 
 ## Tech
 
-- **Expo / React Native** (TypeScript) — one codebase, Android APK, animated UI.
-- **Firebase** (free Spark plan) — Auth + Firestore, secured with multi-tenant rules.
-- **On-device notifications** via `expo-notifications` (no server needed).
+- **React Native** (TypeScript) — one codebase, Android APK, animated UI.
+- **Firebase** (free tier) — Auth + Firestore, secured with multi-tenant rules.
+- **On-device notifications** — reminders fire even when the app is closed, no server needed.
 - Business logic (pricing, ledger, consolidation) is pure and **unit-tested**.
 
 ## Security

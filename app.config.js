@@ -40,16 +40,18 @@ module.exports = {
       ],
     ],
     extra: {
-      // GitHub repo ("owner/name") used for in-app update checks via GitHub
-      // Releases. Leave empty to fall back to a Firestore version doc.
-      githubRepo: process.env.EXPO_PUBLIC_GITHUB_REPO || '',
+      // GitHub repo ("owner/name") for in-app update checks via Releases.
+      githubRepo: process.env.EXPO_PUBLIC_GITHUB_REPO || 'PushkarPisolkar04/meal-distributor',
+      // Firebase Web config. These are public client identifiers (safe to ship
+      // in the app / repo); data is protected by Firestore Security Rules. Env
+      // vars override these for local dev.
       firebase: {
-        apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-        authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-        projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
-        storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-        messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-        appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
+        apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyADddScer_YO0JmOcKAT0hdN_GpnOb0-ME',
+        authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'tiffin-manager-52c24.firebaseapp.com',
+        projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'tiffin-manager-52c24',
+        storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'tiffin-manager-52c24.firebasestorage.app',
+        messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '426672193870',
+        appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:426672193870:web:20c4ac711aad39696c5e1f',
       },
     },
   },
