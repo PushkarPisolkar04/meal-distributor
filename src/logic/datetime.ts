@@ -126,3 +126,9 @@ export function formatDayLabel(iso: string): string {
   const d = parseISODate(iso);
   return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
+
+/** Short date without weekday, e.g. "20 Jul" (used in the vendor message). */
+export function formatDayMonth(iso: string): string {
+  const d = parseISODate(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}

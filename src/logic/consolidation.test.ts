@@ -33,7 +33,7 @@ describe('consolidation', () => {
     ]);
   });
 
-  test('vendor message matches the example format', () => {
+  test('vendor message: date header, per-office lines, half default / full marked', () => {
     const summary = consolidate(
       [
         entry('a', 'teerth', 'full'),
@@ -43,19 +43,29 @@ describe('consolidation', () => {
       offices,
       '2026-07-20',
       '20 Jul',
+      'Pushkar',
     );
     expect(summary.totalTiffins).toBe(3);
-    expect(summary.totalFull).toBe(2);
-    expect(summary.totalHalf).toBe(1);
     expect(summary.vendorMessage).toBe(
-      'Tiffin order 20 Jul: Teerth 2 (1F, 1H), SBC 1 (1F). Total 3.',
+      '20 Jul\n1 Tiffin Pushkar Teerth, 1 Full Tiffin Pushkar Teerth\n1 Full Tiffin Pushkar SBC',
     );
+  });
+
+  test('vendor message pluralizes and omits name when not given', () => {
+    const summary = consolidate(
+      [entry('a', 'sbc', 'half'), entry('b', 'sbc', 'half'), entry('c', 'teerth', 'half')],
+      offices,
+      '2026-07-21',
+      '21 Jul',
+    );
+    // offices order is [teerth, sbc]
+    expect(summary.vendorMessage).toBe('21 Jul\n1 Tiffin Teerth\n2 Tiffins SBC');
   });
 
   test('empty order produces a no-order message', () => {
     const summary = consolidate([entry('a', 'sbc', 'skip')], offices, '2026-07-20', '20 Jul');
     expect(summary.totalTiffins).toBe(0);
-    expect(buildVendorMessage(summary, '20 Jul')).toBe('No tiffin order for 20 Jul today.');
+    expect(buildVendorMessage(summary, '20 Jul')).toBe('20 Jul: No tiffin order today.');
   });
 
   test('orders for an unknown office are not dropped', () => {

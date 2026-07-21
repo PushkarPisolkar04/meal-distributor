@@ -24,6 +24,7 @@ import {
 import {
   todayISO,
   formatDayLabel,
+  formatDayMonth,
   minutesUntilCutoff,
   minutesOfDay,
   isBeforeCutoff,
@@ -54,8 +55,11 @@ export function CoordinatorDashboard() {
 
   const activeMembers = useMemo(() => members.filter((m) => m.active), [members]);
   const consolidated = useMemo(
-    () => (org ? consolidate(orders, org.offices, today, formatDayLabel(today)) : null),
-    [orders, org, today],
+    () =>
+      org
+        ? consolidate(orders, org.offices, today, formatDayMonth(today), profile?.name ?? me?.name ?? '')
+        : null,
+    [orders, org, today, profile?.name, me?.name],
   );
   const pendingUids = useMemo(
     () => pendingMembers(activeMembers.map((m) => m.uid), orders),

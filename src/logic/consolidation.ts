@@ -46,23 +46,39 @@ export function countByOffice(entries: OrderEntry[], offices: Office[]): OfficeC
   return ordered;
 }
 
+function plural(n: number, word: string): string {
+  return n === 1 ? word : `${word}s`;
+}
+
 /**
- * Build the short vendor message. Only offices with at least one tiffin appear.
- * Example: "Tiffin order 20 Jul: Teerth 2 (1F, 1H), SBC 1 (1F). Total 3."
+ * Build the vendor message: a date header, then one line per office. Half is the
+ * default and written as just "Tiffin"; full is called out as "Full Tiffin".
+ * `contactName` is the point-of-contact (coordinator) shown to the vendor.
+ *
+ * Example:
+ *   21 Jul
+ *   2 Tiffins Pushkar SBC
+ *   1 Tiffin Pushkar Teerth
  */
-export function buildVendorMessage(summary: DailySummary, dateLabel?: string): string {
+export function buildVendorMessage(
+  summary: DailySummary,
+  dateLabel?: string,
+  contactName = '',
+): string {
+  const who = contactName.trim() ? `${contactName.trim()} ` : '';
   const active = summary.perOffice.filter((o) => o.total > 0);
   if (active.length === 0) {
-    return `No tiffin order${dateLabel ? ` for ${dateLabel}` : ''} today.`;
+    return `${dateLabel ? `${dateLabel}: ` : ''}No tiffin order today.`;
   }
-  const parts = active.map((o) => {
-    const breakdown: string[] = [];
-    if (o.full > 0) breakdown.push(`${o.full}F`);
-    if (o.half > 0) breakdown.push(`${o.half}H`);
-    return `${o.officeName} ${o.total} (${breakdown.join(', ')})`;
+  const lines = active.map((o) => {
+    const parts: string[] = [];
+    // Half tiffins are the default label.
+    if (o.half > 0) parts.push(`${o.half} ${plural(o.half, 'Tiffin')} ${who}${o.officeName}`);
+    // Full tiffins are explicitly marked.
+    if (o.full > 0) parts.push(`${o.full} Full ${plural(o.full, 'Tiffin')} ${who}${o.officeName}`);
+    return parts.join(', ');
   });
-  const head = dateLabel ? `Tiffin order ${dateLabel}: ` : 'Tiffin order: ';
-  return `${head}${parts.join(', ')}. Total ${summary.totalTiffins}.`;
+  return [dateLabel, ...lines].filter(Boolean).join('\n');
 }
 
 /** Full consolidation: counts, totals and the ready-to-send vendor message. */
@@ -71,6 +87,7 @@ export function consolidate(
   offices: Office[],
   date: string,
   dateLabel?: string,
+  contactName = '',
 ): DailySummary {
   const perOffice = countByOffice(entries, offices);
   const totalHalf = perOffice.reduce((s, o) => s + o.half, 0);
@@ -83,7 +100,7 @@ export function consolidate(
     totalTiffins: totalHalf + totalFull,
     vendorMessage: '',
   };
-  summary.vendorMessage = buildVendorMessage(summary, dateLabel);
+  summary.vendorMessage = buildVendorMessage(summary, dateLabel, contactName);
   return summary;
 }
 
